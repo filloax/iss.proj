@@ -1,1 +1,1 @@
-rootProject.name = 'unibo.commbt'
+rootProject.name = "unibo.commbt"

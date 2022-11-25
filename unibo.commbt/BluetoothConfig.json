@@ -1,0 +1,11 @@
+{
+    "maxBtVersion": "2.0",
+    "serverScript": "server.py",
+    "printStdErr": true,
+    "scriptFolder": "",
+    "pythonCmd": "python",
+    "logScriptsFolder": "log",
+    "logScripts": false,
+    "clientScript": "client.py",
+    "verbose": false
+}
