@@ -21,6 +21,10 @@ buf_size = 1024
 
 s = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)
 s.bind((address, port))
+
+if verbose:
+    print(f'Bound to {address}/{port}', file=sys.stderr)
+
 s.listen(1)
 try:
     if verbose:

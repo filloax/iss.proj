@@ -2,27 +2,15 @@ package it.unibo.comm22.bluetooth
 
 import unibo.comm22.interfaces.Interaction2021
 import unibo.comm22.utils.ColorsOut
-import java.io.BufferedWriter
 import java.io.DataOutputStream
-import java.io.FileOutputStream
-import java.io.FileWriter
 import java.io.IOException
-import java.io.InputStream
-import java.io.OutputStream
 import java.io.PrintStream
-import java.io.PrintWriter
 import java.nio.file.FileSystems
 import java.nio.file.Path
-import java.text.SimpleDateFormat
-import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import kotlin.concurrent.thread
-import kotlin.io.path.bufferedWriter
 import kotlin.io.path.outputStream
-import kotlin.io.path.writer
-import kotlin.math.log
 
 /**
  * Handles a bluetooth connection based on Python scripts
@@ -40,6 +28,12 @@ class BluetoothConnectionPython(val process: Process)
 
     init {
         tryRedirectProcessStderr(process)
+
+        Runtime.getRuntime().addShutdownHook(thread(start=false, block={
+            if (process.isAlive) {
+                process.destroy()
+            }
+        }))
     }
 
     companion object {
@@ -55,7 +49,7 @@ class BluetoothConnectionPython(val process: Process)
                     "status: ${if (process.isAlive) "running" else "dead"}" +
                     "/${if (!process.isAlive) process.exitValue() else "-"}")
 
-            return checkProcessAndReturn(process)
+            return waitStartThenReturn(process)
         }
 
         fun createServer(address: String, port: Int = 5): Interaction2021 {
@@ -70,17 +64,24 @@ class BluetoothConnectionPython(val process: Process)
                     "status: ${if (process.isAlive) "running" else "dead"}" +
                     "/${if (!process.isAlive) process.exitValue() else "-"}")
 
-            return checkProcessAndReturn(process)
+            return waitStartThenReturn(process)
         }
 
-        private fun checkProcessAndReturn(process: Process): BluetoothConnectionPython {
-            val startLine = process.inputStream.bufferedReader().readLine()
+        private fun waitStartThenReturn(process: Process): BluetoothConnectionPython {
+            val conn = BluetoothConnectionPython(process)
 
-            if (startLine == "CONNECTED") {
-                return BluetoothConnectionPython(process)
+            val checkLine = "CONNECTED"
+            val startLine = conn.receiveMsg()
+
+            if (startLine == checkLine) {
+                ColorsOut.out("BT conn setup: received $checkLine, returning", ColorsOut.BLUE)
+                return conn
             } else {
-                tryRedirectProcessStderr(process)
-                throw IOException("Didn't start BT script properly, start line is <$startLine>; check log if logging")//, err line is <$errLine>")
+                conn.close()
+                if (startLine != null)
+                    throw IOException("BT conn setup: Didn't start BT script properly, start line is <$startLine>; check log if logging")
+                else
+                    throw IOException("BT conn setup: Script error!")
             }
         }
 
@@ -106,19 +107,19 @@ class BluetoothConnectionPython(val process: Process)
                     val reader = process.errorStream.bufferedReader()
                     try {
                         while (process.isAlive || reader.ready()) {
-                            val line = reader.readLine()
+                            reader.readLine()?.let { line ->
+                                // Python non installato
+                                if (line.lowercase().matches(Regex(""".*python.*(non trovato|not found).*"""))) {
+                                    System.err.println(
+                                        "Python command '${BluetoothConfig.pythonCmd}' not found; maybe not installed " +
+                                                "or should use change command in config?\nOS error is: $line"
+                                    )
+                                }
 
-                            // Python non installato
-                            if (line.lowercase().matches(Regex(""".*python.*(non trovato|not found).*"""))) {
-                                System.err.println(
-                                    "Python command '${BluetoothConfig.pythonCmd}' not found; maybe not installed " +
-                                            "or should use change command in config?\nOS error is: $line"
-                                )
-                            }
-
-                            streams.forEach{
-                                it.println(line)
-                                it.flush()
+                                streams.forEach {
+                                    it.println(line)
+                                    it.flush()
+                                }
                             }
                         }
                     } finally {
@@ -151,7 +152,8 @@ class BluetoothConnectionPython(val process: Process)
 
     override fun receiveMsg(): String? {
         return try {
-            procStdOut.readLine()
+            val line = procStdOut.readLine()
+            line
         } catch (e : IOException) {
             e.printStackTrace()
             null

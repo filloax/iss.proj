@@ -13,6 +13,7 @@ import unibo.comm22.utils.CommUtils
 
 class BasicTest {
     val address = "00:10:60:d1:4b:88"
+    // raspi addr: B8:27:EB:ED:D8:8F
 
     /**
      * Nota: non funziona con BT <4.1 (come controllare:
@@ -30,7 +31,6 @@ class BasicTest {
             return
         }
 
-        BluetoothConfig.scriptFolder = "..\\scripts"
         CommSystemConfig.tracing = true
 
         val msg = "TestMessage"

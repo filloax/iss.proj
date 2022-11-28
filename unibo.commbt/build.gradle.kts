@@ -17,7 +17,8 @@ dependencies {
 	implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 	implementation("org.jetbrains.kotlin:kotlin-reflect:1.7.10")
 
-	implementation("org.json:json:20220320")
+	implementation("org.json:json:20220924")
+	implementation(":2p301")
 
 	// https://mvnrepository.com/artifact/io.ultreia/bluecove
 	// Fork aggiornato
@@ -29,4 +30,10 @@ dependencies {
     implementation(":unibo.comm22-1.4")
 	implementation(":uniboInterfaces")
 	testImplementation("junit:junit:4.13.2")
+}
+
+task<JavaExec>("runClient") {
+	mainClass.set("it.unibo.comm22.bluetooth.main.SimpleClientKt")
+	classpath = java.sourceSets["main"].runtimeClasspath
+	standardInput = System.`in`
 }

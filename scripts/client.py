@@ -14,6 +14,7 @@ parser.add_argument("-a", "--address", required=True, help="Bluetooth address of
 parser.add_argument("-p", "--port", default=5, type=int, help="Server port")
 parser.add_argument("-v", "--verbose", action="store_true")
 parser.add_argument("-r", "--retries", default=5, type=int, help="Max repeats when connecting")
+parser.add_argument("--nodelay", action="store_true", help="Do not buffer socket messages")
 
 
 args = parser.parse_args()
@@ -21,11 +22,19 @@ address: str = args.address
 port: int = args.port
 verbose: bool = args.verbose
 retries: int = args.retries
+nodelay: bool = args.nodelay
 
 if verbose:
     print(f"Connecting to {address}/{port}...", file=sys.stderr)
 
+
 s = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)
+
+flags = 0
+if nodelay:
+    print("No delay on, setting buffer to 0", file=sys.stderr)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 0)
+    flags += socket.MSG_WAITALL
 
 done_repeats = 0
 connected = False
@@ -48,7 +57,8 @@ if verbose:
     print(f"Sending standard input", file=sys.stderr)
 
 for line in sys.stdin:
-    s.send(bytes(line, 'UTF-8'))
+    s.send(bytes(line, 'UTF-8'), flags)
+    print(f"Sent '{line}'", file=sys.stderr)
 
 if verbose:
     print(f"Input finished, closing...", file=sys.stderr)

@@ -2,7 +2,7 @@
     "maxBtVersion": "2.0",
     "serverScript": "server.py",
     "printStdErr": true,
-    "scriptFolder": "",
+    "scriptFolder": "../scripts",
     "pythonCmd": "python",
     "logScriptsFolder": "log",
     "logScripts": false,

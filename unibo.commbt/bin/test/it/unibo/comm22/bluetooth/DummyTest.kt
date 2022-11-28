@@ -11,9 +11,8 @@ import unibo.comm22.utils.CommSystemConfig
 import unibo.comm22.utils.CommUtils
 
 
-class BasicTest {
+class DummyTest {
     val address = "00:10:60:d1:4b:88"
-    // raspi addr: B8:27:EB:ED:D8:8F
 
     /**
      * Nota: non funziona con BT <4.1 (come controllare:
@@ -22,18 +21,16 @@ class BasicTest {
      * nella versione 4.1 del protocollo.python get
      */
     @Test
-    fun basicTest() {
+    fun dummyTest() {
         BluetoothConfig.disableWrite()
         BluetoothConfig.setConfiguration()
 
-        if (!BluetoothConfig.checkBtVersion("4.1")) {
-            ColorsOut.outappl("Bluetooth version \"${BluetoothConfig.maxBtVersion}\" too old for basic test, won't do", ColorsOut.YELLOW)
-            return
-        }
+        BluetoothConfig.scriptFolder = "../scripts/test"
+        BluetoothConfig.serverScript = "dummy_server.py"
 
         CommSystemConfig.tracing = true
 
-        val msg = "TestMessage"
+        val msg = "ananas"
         var received : String? = null
 
         val server = BluetoothServer("TestServer", address, object : BluetoothMsgHandler("TestHandler") {
@@ -46,15 +43,13 @@ class BasicTest {
 
         server.activate()
 
-        val clientConn = BluetoothClientSupport.connect(address, nattempts = 1)
-        val applMessage = ApplMessage("testMsg", ApplMessageType.dispatch.toString(), "client", "server", msg, "1")
-        clientConn.forward(applMessage.toString())
-
         ColorsOut.outappl("Waiting for server received...", ColorsOut.YELLOW)
 
         while (received == null) {
             Thread.sleep(500)
         }
+
+        server.stop()
 
         assertEquals(msg, received)
     }
