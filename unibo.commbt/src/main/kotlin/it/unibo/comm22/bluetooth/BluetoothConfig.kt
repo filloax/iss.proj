@@ -3,9 +3,9 @@ package it.unibo.comm22.bluetooth
 import it.unibo.comm22.utils.StaticConfig
 
 object BluetoothConfig {
-    var scriptFolder: String = ""
-    var clientScript: String = "client.py"
-    var serverScript: String = "server.py"
+    var scriptFolder: String = "../scripts"
+    var clientScript: String = "btconn.py"
+    var serverScript: String = "btconn.py"
     var pythonCmd: String = "python"
     var maxBtVersion: String = "2.0"
 

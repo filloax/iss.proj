@@ -2,10 +2,10 @@ package it.unibo.comm22.bluetooth
 
 import unibo.comm22.interfaces.Interaction2021
 import unibo.comm22.utils.ColorsOut
-import java.io.DataOutputStream
+import java.io.BufferedReader
 import java.io.IOException
+import java.io.OutputStreamWriter
 import java.io.PrintStream
-import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -18,15 +18,36 @@ import kotlin.io.path.outputStream
  *  its stdout should be the connection received data while its stdin should be
  *  data sent to the connection
  */
-class BluetoothConnectionPython(val process: Process)
+class BluetoothConnectionPython(val address: String, val port: Int, val listen: Boolean = false, params: String = "")
         : Interaction2021 {
 
-    private val procStdOut = process.inputStream.bufferedReader()
-    private val procStdIn = DataOutputStream(process.outputStream)
+    val process: Process
+    private val procStdOut: BufferedReader
+    private val procStdIn: OutputStreamWriter
 
-    val isOpen get() = process.isAlive
+    val open get() = process.isAlive
 
     init {
+        val scriptPath = Path.of(
+            BluetoothConfig.scriptFolder,
+            if (listen) BluetoothConfig.serverScript else BluetoothConfig.clientScript,
+        ).toAbsolutePath()
+        val executable = "${BluetoothConfig.pythonCmd} $scriptPath"
+        val verbosePart = if (BluetoothConfig.verbose) " -v" else ""
+        val listenPart = if (listen) " -l" else ""
+        val cmd = "$executable -a $address -p $port $listenPart$params$verbosePart"
+
+        process = Runtime.getRuntime().exec(cmd)
+
+        ColorsOut.out("BtConnPython | Started process with command '$cmd', " +
+                "status: ${if (process.isAlive) "running" else "dead"}" +
+                "/${if (!process.isAlive) process.exitValue() else "-"}" +
+                " listen: $listen"
+        )
+
+        procStdOut = process.inputStream.bufferedReader()
+        procStdIn = OutputStreamWriter(process.outputStream)
+
         tryRedirectProcessStderr(process)
 
         Runtime.getRuntime().addShutdownHook(thread(start=false, block={
@@ -34,48 +55,27 @@ class BluetoothConnectionPython(val process: Process)
                 process.destroy()
             }
         }))
+
+        waitStart(this)
     }
 
     companion object {
         fun createClient(address: String, port: Int = 5, nattempts: Int = 5): Interaction2021 {
-            val sep = FileSystems.getDefault().separator
-            val scriptPath = Path.of(BluetoothConfig.scriptFolder, BluetoothConfig.clientScript).toAbsolutePath()
-            val executable = "${BluetoothConfig.pythonCmd} $scriptPath"
-            var verbosePart = if (BluetoothConfig.verbose) " -v" else ""
-            val cmd = "$executable -a $address -p $port -r $nattempts$verbosePart"
-            val process = Runtime.getRuntime().exec(cmd)
+            val params = "-r $nattempts"
 
-            ColorsOut.out("createClient | Started process with command '$cmd', " +
-                    "status: ${if (process.isAlive) "running" else "dead"}" +
-                    "/${if (!process.isAlive) process.exitValue() else "-"}")
-
-            return waitStartThenReturn(process)
+            return BluetoothConnectionPython(address, port, false, params)
         }
 
         fun createServer(address: String, port: Int = 5): Interaction2021 {
-            val sep = FileSystems.getDefault().separator
-            val scriptPath = Path.of(BluetoothConfig.scriptFolder, BluetoothConfig.serverScript).toAbsolutePath()
-            val executable = "${BluetoothConfig.pythonCmd} $scriptPath"
-            var verbosePart = if (BluetoothConfig.verbose) " -v" else ""
-            val cmd = "$executable -a $address -p $port$verbosePart"
-            val process = Runtime.getRuntime().exec(cmd)
-
-            ColorsOut.out("createServer | Started process with command '$cmd', " +
-                    "status: ${if (process.isAlive) "running" else "dead"}" +
-                    "/${if (!process.isAlive) process.exitValue() else "-"}")
-
-            return waitStartThenReturn(process)
+            return BluetoothConnectionPython(address, port, true)
         }
 
-        private fun waitStartThenReturn(process: Process): BluetoothConnectionPython {
-            val conn = BluetoothConnectionPython(process)
-
+        private fun waitStart(conn: BluetoothConnectionPython) {
             val checkLine = "CONNECTED"
             val startLine = conn.receiveMsg()
 
             if (startLine == checkLine) {
                 ColorsOut.out("BT conn setup: received $checkLine, returning", ColorsOut.BLUE)
-                return conn
             } else {
                 conn.close()
                 if (startLine != null)
@@ -134,7 +134,7 @@ class BluetoothConnectionPython(val process: Process)
 
     override fun forward(msg: String) {
         try {
-            procStdIn.writeBytes("$msg\n")
+            procStdIn.write("$msg\n")
             procStdIn.flush()
         } catch (e : IOException) {
             e.printStackTrace()
@@ -152,8 +152,7 @@ class BluetoothConnectionPython(val process: Process)
 
     override fun receiveMsg(): String? {
         return try {
-            val line = procStdOut.readLine()
-            line
+            procStdOut.readLine()
         } catch (e : IOException) {
             e.printStackTrace()
             null
