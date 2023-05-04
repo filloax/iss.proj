@@ -8,11 +8,10 @@ import org.junit.Test
 import unibo.comm22.interfaces.Interaction2021
 import unibo.comm22.utils.ColorsOut
 import unibo.comm22.utils.CommSystemConfig
-import unibo.comm22.utils.CommUtils
 
 
 class BasicTest {
-    val address = "00:10:60:d1:4b:88"
+    val localAddress = "30:89:4a:64:d0:b5"
     // raspi addr: B8:27:EB:ED:D8:8F
 
     /**
@@ -36,7 +35,7 @@ class BasicTest {
         val msg = "TestMessage"
         var received : String? = null
 
-        val server = BluetoothServer("TestServer", address, object : BluetoothMsgHandler("TestHandler") {
+        val server = BluetoothServer("TestServer", localAddress, object : BluetoothMsgHandler("TestHandler") {
             override fun elaborate(msg: IApplMessage, conn: Interaction2021) {
                 ColorsOut.outappl("Server received message: '$msg'", ColorsOut.CYAN)
                 received = msg.msgContent()
@@ -46,7 +45,7 @@ class BasicTest {
 
         server.activate()
 
-        val clientConn = BluetoothClientSupport.connect(address, nattempts = 1)
+        val clientConn = BluetoothClientSupport.connect(localAddress, nattempts = 1)
         val applMessage = ApplMessage("testMsg", ApplMessageType.dispatch.toString(), "client", "server", msg, "1")
         clientConn.forward(applMessage.toString())
 

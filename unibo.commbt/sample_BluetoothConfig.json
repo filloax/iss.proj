@@ -1,11 +1,11 @@
 {
     "maxBtVersion": "2.0",
-    "serverScript": "server.py",
+    "serverScript": "btconn.py",
     "printStdErr": true,
     "scriptFolder": "../scripts",
     "pythonCmd": "python",
     "logScriptsFolder": "log",
     "logScripts": false,
-    "clientScript": "client.py",
+    "clientScript": "btconn.py",
     "verbose": false
 }
