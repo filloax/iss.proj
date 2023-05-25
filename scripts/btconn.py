@@ -2,6 +2,11 @@
 Connect to specified server over RFCOMM (Bluetooth) and read 
 data from stdin until EOF, sending it over the connection
 Prints "CONNECTED" to stdout on first connection to signal owner processes.
+
+IMPORTANT: Requires at least Python 3.6 (on Linux) adn 3.11* (on Windows) for socket.AF_BLUETOOTH to work.
+
+* Note: cannot find exact information on when socket.AF_BLUETOOTH started working on Windows, 
+but 3.11 is the version used in development and so sure to work.
 """
 
 import socket
